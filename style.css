@@ -1,0 +1,164 @@
+/* ===== RESET & BASE ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+html, body {
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    overflow: hidden;
+    cursor: none;
+}
+
+/* ===== CAR IMAGE LAYER ===== */
+#car-scene {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#car-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    filter: brightness(0.95) contrast(1.05) saturate(1.1);
+}
+
+/* ===== CANVAS LAYERS ===== */
+#smog-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    opacity: 0.6;
+}
+
+#light-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    opacity: 0.7;
+}
+
+#particle-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 4;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    opacity: 0.5;
+}
+
+/* ===== VIGNETTE OVERLAY ===== */
+#vignette {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    pointer-events: none;
+    background: radial-gradient(
+        ellipse at 50% 50%,
+        transparent 40%,
+        rgba(0, 0, 0, 0.3) 70%,
+        rgba(0, 0, 0, 0.7) 100%
+    );
+}
+
+/* ===== TAILLIGHT GLOW ===== */
+#taillight-glow {
+    position: fixed;
+    z-index: 5;
+    width: 350px;
+    height: 120px;
+    top: 38%;
+    left: 22%;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(255, 50, 20, 0.35) 0%,
+        rgba(255, 30, 10, 0.15) 40%,
+        transparent 70%
+    );
+    pointer-events: none;
+    mix-blend-mode: screen;
+    animation: taillight-pulse 3s ease-in-out infinite;
+    filter: blur(15px);
+}
+
+@keyframes taillight-pulse {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.1); }
+}
+
+/* ===== AMBIENT LIGHT GLOWS ===== */
+#ambient-glow-left {
+    position: fixed;
+    z-index: 5;
+    width: 500px;
+    height: 600px;
+    top: 10%;
+    left: -5%;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(30, 80, 200, 0.2) 0%,
+        rgba(20, 60, 180, 0.1) 40%,
+        transparent 70%
+    );
+    pointer-events: none;
+    mix-blend-mode: screen;
+    animation: ambient-left-pulse 5s ease-in-out infinite;
+    filter: blur(40px);
+}
+
+@keyframes ambient-left-pulse {
+    0%, 100% { opacity: 0.5; transform: translateY(0px); }
+    50% { opacity: 0.8; transform: translateY(-10px); }
+}
+
+#ambient-glow-right {
+    position: fixed;
+    z-index: 5;
+    width: 400px;
+    height: 500px;
+    top: 20%;
+    right: 5%;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(40, 100, 220, 0.15) 0%,
+        rgba(30, 70, 190, 0.08) 40%,
+        transparent 70%
+    );
+    pointer-events: none;
+    mix-blend-mode: screen;
+    animation: ambient-right-pulse 7s ease-in-out infinite;
+    filter: blur(35px);
+}
+
+@keyframes ambient-right-pulse {
+    0%, 100% { opacity: 0.4; transform: translateY(0px) scale(1); }
+    50% { opacity: 0.7; transform: translateY(-15px) scale(1.05); }
+}

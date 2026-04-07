@@ -1,0 +1,18 @@
+{
+    "smogIntensity": {
+        "max": 10,
+        "min": 1,
+        "tick": 1,
+        "type": "slider",
+        "value": 5,
+        "text": "Smog Intensity"
+    },
+    "lightIntensity": {
+        "max": 10,
+        "min": 1,
+        "tick": 1,
+        "type": "slider",
+        "value": 5,
+        "text": "Light Intensity"
+    }
+}
