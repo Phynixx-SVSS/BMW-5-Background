@@ -86,6 +86,38 @@
         return a + (b - a) * t;
     }
 
+    // ===== PRE-RENDER SPRITES (PERFORMANCE FIX) =====
+    const smogSprites = CONFIG.smog.colors.map(color => {
+        const cvs = document.createElement('canvas');
+        cvs.width = 600; cvs.height = 600;
+        const c = cvs.getContext('2d');
+        const grad = c.createRadialGradient(300, 300, 0, 300, 300, 300);
+        grad.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, 1)`);
+        grad.addColorStop(0.4, `rgba(${color.r}, ${color.g}, ${color.b}, 0.5)`);
+        grad.addColorStop(1, `rgba(${color.r}, ${color.g}, ${color.b}, 0)`);
+        c.fillStyle = grad;
+        c.fillRect(0, 0, 600, 600);
+        return cvs;
+    });
+
+    const dustSprites = [];
+    for (let i = 0; i <= 10; i++) {
+        const t = i / 10;
+        const r = Math.floor(lerp(100, 200, t));
+        const g = Math.floor(lerp(140, 220, t));
+        const b = Math.floor(lerp(200, 255, t));
+        
+        const cvs = document.createElement('canvas');
+        cvs.width = 64; cvs.height = 64;
+        const c = cvs.getContext('2d');
+        const grad = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+        grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.3)`);
+        grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+        c.fillStyle = grad;
+        c.fillRect(0, 0, 64, 64);
+        dustSprites.push({ cvs, r, g, b });
+    }
+
     // ===== SMOG / FOG SYSTEM =====
     class SmogParticle {
         constructor() {
@@ -93,8 +125,7 @@
         }
 
         reset(initial) {
-            const c = CONFIG.smog.colors[Math.floor(Math.random() * CONFIG.smog.colors.length)];
-            this.color = c;
+            this.spriteIndex = Math.floor(Math.random() * smogSprites.length);
             this.size = rand(CONFIG.smog.sizeMin, CONFIG.smog.sizeMax);
             this.opacity = rand(CONFIG.smog.opacityMin, CONFIG.smog.opacityMax);
             this.maxOpacity = this.opacity;
@@ -110,7 +141,6 @@
             this.vy = rand(-0.1, 0.1);
             this.phase = rand(0, Math.PI * 2);
             this.phaseSpeed = rand(0.003, 0.01);
-            this.wobbleAmp = rand(10, 40);
 
             // Fade lifecycle
             this.life = 0;
@@ -141,20 +171,10 @@
         }
 
         draw(ctx) {
-            if (this.opacity <= 0) return;
-
-            const grad = ctx.createRadialGradient(
-                this.x, this.y, 0,
-                this.x, this.y, this.size
-            );
-            grad.addColorStop(0, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${this.opacity})`);
-            grad.addColorStop(0.4, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${this.opacity * 0.5})`);
-            grad.addColorStop(1, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0)`);
-
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-            ctx.fill();
+            if (this.opacity <= 0.001) return;
+            ctx.globalAlpha = Math.max(0, Math.min(1, this.opacity));
+            ctx.drawImage(smogSprites[this.spriteIndex], this.x - this.size, this.y - this.size, this.size * 2, this.size * 2);
+            ctx.globalAlpha = 1.0;
         }
     }
 
@@ -284,11 +304,11 @@
             this.twinkleSpeed = rand(0.01, 0.04);
             this.twinklePhase = rand(0, Math.PI * 2);
 
-            // Blue-ish white tint
-            const tint = rand(0.6, 1);
-            this.r = Math.floor(lerp(100, 200, tint));
-            this.g = Math.floor(lerp(140, 220, tint));
-            this.b = Math.floor(lerp(200, 255, tint));
+            this.spriteIndex = Math.floor(Math.random() * dustSprites.length);
+            const sp = dustSprites[this.spriteIndex];
+            this.r = sp.r;
+            this.g = sp.g;
+            this.b = sp.b;
 
             this.life = 0;
             this.maxLife = rand(400, 1200);
@@ -320,24 +340,21 @@
         draw(ctx) {
             if (this.opacity <= 0.01) return;
 
-            // Glow
-            const glowGrad = ctx.createRadialGradient(
-                this.x, this.y, 0,
-                this.x, this.y, this.size * CONFIG.particles.glowSize
-            );
-            glowGrad.addColorStop(0, `rgba(${this.r}, ${this.g}, ${this.b}, ${this.opacity * 0.3})`);
-            glowGrad.addColorStop(1, `rgba(${this.r}, ${this.g}, ${this.b}, 0)`);
-
-            ctx.fillStyle = glowGrad;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size * CONFIG.particles.glowSize, 0, Math.PI * 2);
-            ctx.fill();
-
+            const drawOp = Math.max(0, Math.min(1, this.opacity));
+            const sprite = dustSprites[this.spriteIndex];
+            const size = this.size * CONFIG.particles.glowSize;
+            
+            ctx.globalAlpha = drawOp;
+            ctx.drawImage(sprite.cvs, this.x - size, this.y - size, size * 2, size * 2);
+            
             // Core
-            ctx.fillStyle = `rgba(${this.r}, ${this.g}, ${this.b}, ${this.opacity})`;
+            ctx.globalAlpha = drawOp;
+            ctx.fillStyle = `rgb(${this.r}, ${this.g}, ${this.b})`;
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
             ctx.fill();
+            
+            ctx.globalAlpha = 1.0;
         }
     }
 
@@ -408,29 +425,39 @@
             particleCtx.clearRect(0, 0, W, H);
 
             // Draw ground fog
-            groundFog.update(time);
-            groundFog.draw(smogCtx);
+            try {
+                groundFog.update(time);
+                groundFog.draw(smogCtx);
+            } catch (err) {}
 
             // Draw smog
             for (const p of smogParticles) {
-                p.update();
-                p.draw(smogCtx);
+                try {
+                    p.update();
+                    p.draw(smogCtx);
+                } catch (err) {}
             }
 
             // Draw light rays
             for (const ray of lightRays) {
-                ray.update(now * 0.001); // Pass absolute time in seconds for sway
-                ray.draw(lightCtx);
+                try {
+                    ray.update(now * 0.001); // Pass absolute time in seconds for sway
+                    ray.draw(lightCtx);
+                } catch (err) {}
             }
 
             // Draw taillight glow
-            taillightGlow.update(time);
-            taillightGlow.draw(lightCtx);
+            try {
+                taillightGlow.update(time);
+                taillightGlow.draw(lightCtx);
+            } catch (err) {}
 
             // Draw dust particles
             for (const d of dustParticles) {
-                d.update();
-                d.draw(particleCtx);
+                try {
+                    d.update();
+                    d.draw(particleCtx);
+                } catch (err) {}
             }
         } catch (e) {
             console.error("Animation Frame Error:", e);
@@ -441,31 +468,37 @@
 
     requestAnimationFrame(animate);
 
-    // ===== LIVELY WALLPAPER API =====
-    // Lively passes properties via livelyPropertyListener
     window.livelyPropertyListener = function (name, val) {
         const numVal = Number(val);
         if (isNaN(numVal)) return;
 
         switch (name) {
             case 'smogIntensity':
-                CONFIG.smog.opacityMax = numVal * 0.1;
+                CONFIG.smog.opacityMax = Math.min(1.0, numVal * 0.1);
                 break;
             case 'lightIntensity':
-                CONFIG.lights.volumetricOpacity = numVal * 0.05;
+                CONFIG.lights.volumetricOpacity = Math.min(1.0, numVal * 0.05);
                 break;
             case 'particleCount':
-                // Adjusting particle count dynamically requires more logic, 
-                // but let's keep it safe for now.
                 break;
         }
     };
 
+    let isPaused = false;
+    let pauseTime = performance.now();
+    
     // Handle Lively wallpaper pause/resume
     window.livelyWallpaperPlayback = function (state) {
         // state: 0 = play, 1 = pause
         if (state === 0) {
-            startTime = performance.now();
+            if (isPaused) {
+                startTime += performance.now() - pauseTime;
+                lastTime = performance.now();
+                isPaused = false;
+            }
+        } else {
+            isPaused = true;
+            pauseTime = performance.now();
         }
     };
 
