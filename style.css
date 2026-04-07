@@ -9,8 +9,9 @@
 html, body {
     width: 100vw;
     height: 100vh;
-    background: #000;
+    background: #000000; /* Solid black fallback */
     overflow: hidden;
+    color: white;
 }
 
 /* ===== CAR IMAGE LAYER ===== */
