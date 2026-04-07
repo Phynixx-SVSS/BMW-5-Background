@@ -59,8 +59,13 @@
     let W, H;
 
     function resize() {
-        W = window.innerWidth;
-        H = window.innerHeight;
+        W = window.innerWidth || 1920;
+        H = window.innerHeight || 1080;
+        
+        // Prevent 0 size issues
+        if (W < 10) W = 1920;
+        if (H < 10) H = 1080;
+
         smogCanvas.width = W;
         smogCanvas.height = H;
         lightCanvas.width = W;
@@ -386,40 +391,49 @@
     }
 
     // ===== ANIMATION LOOP =====
-    let startTime = performance.now();
+    let lastTime = performance.now();
+    let startTime = lastTime;
 
     function animate(timestamp) {
-        const time = timestamp - startTime;
+        // Use performance.now() as fallback to ensure consistency across environments
+        const now = timestamp || performance.now();
+        const dt = now - lastTime;
+        const time = now - startTime;
+        lastTime = now;
 
-        // Clear canvases
-        smogCtx.clearRect(0, 0, W, H);
-        lightCtx.clearRect(0, 0, W, H);
-        particleCtx.clearRect(0, 0, W, H);
+        try {
+            // Clear canvases
+            smogCtx.clearRect(0, 0, W, H);
+            lightCtx.clearRect(0, 0, W, H);
+            particleCtx.clearRect(0, 0, W, H);
 
-        // Draw ground fog
-        groundFog.update(time);
-        groundFog.draw(smogCtx);
+            // Draw ground fog
+            groundFog.update(time);
+            groundFog.draw(smogCtx);
 
-        // Draw smog
-        for (const p of smogParticles) {
-            p.update();
-            p.draw(smogCtx);
-        }
+            // Draw smog
+            for (const p of smogParticles) {
+                p.update();
+                p.draw(smogCtx);
+            }
 
-        // Draw light rays
-        for (const ray of lightRays) {
-            ray.update(time);
-            ray.draw(lightCtx);
-        }
+            // Draw light rays
+            for (const ray of lightRays) {
+                ray.update(now * 0.001); // Pass absolute time in seconds for sway
+                ray.draw(lightCtx);
+            }
 
-        // Draw taillight glow
-        taillightGlow.update(time);
-        taillightGlow.draw(lightCtx);
+            // Draw taillight glow
+            taillightGlow.update(time);
+            taillightGlow.draw(lightCtx);
 
-        // Draw dust particles
-        for (const d of dustParticles) {
-            d.update();
-            d.draw(particleCtx);
+            // Draw dust particles
+            for (const d of dustParticles) {
+                d.update();
+                d.draw(particleCtx);
+            }
+        } catch (e) {
+            console.error("Animation Frame Error:", e);
         }
 
         requestAnimationFrame(animate);
@@ -430,15 +444,19 @@
     // ===== LIVELY WALLPAPER API =====
     // Lively passes properties via livelyPropertyListener
     window.livelyPropertyListener = function (name, val) {
+        const numVal = Number(val);
+        if (isNaN(numVal)) return;
+
         switch (name) {
             case 'smogIntensity':
-                CONFIG.smog.opacityMax = val * 0.1;
+                CONFIG.smog.opacityMax = numVal * 0.1;
                 break;
             case 'lightIntensity':
-                CONFIG.lights.volumetricOpacity = val * 0.05;
+                CONFIG.lights.volumetricOpacity = numVal * 0.05;
                 break;
             case 'particleCount':
-                // Adjust particle count dynamically
+                // Adjusting particle count dynamically requires more logic, 
+                // but let's keep it safe for now.
                 break;
         }
     };
